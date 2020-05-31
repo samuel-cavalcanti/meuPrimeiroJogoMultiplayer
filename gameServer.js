@@ -1,9 +1,9 @@
-import express from 'express'
-import http from 'http'
-import {v4 as uuidv4} from 'uuid'
+import express from 'express';
+import http from 'http';
 import Game from "./game.js";
-import socketio from 'socket.io'
-import {Message, MessageTypes} from "./public/message.js";
+import socketio from 'socket.io';
+import {MessageTypes} from "./public/message.js";
+import SocketHandler from "./socketHandler.js";
 
 
 const app = express()
@@ -25,41 +25,11 @@ game.start()
 
 
 sockets.on(MessageTypes.connection, (socket) => {
+    let handle = new SocketHandler()
 
-    function observer(message) {
-        socket.emit(message.type, message)
-    }
+    game.observable.subscribe(socket.id, handle.observers.observer.bind(handle.observers))
+    handle.observable.subscribe('game', game.observers.observer.bind(game.observers))
 
-    const playerID = uuidv4()
-
-    console.log(`new Client is connected ${socket.id}`)
-
-    game.addPlayer(playerID, observer)
-
-    socket.emit(MessageTypes.setup, new Message(MessageTypes.setup, {
-        ids: {
-            player: playerID,
-            server: socket.id
-        },
-        state: game.getState()
-    }))
-
-
-
-    socket.on(MessageTypes.disconnect, () => {
-
-        console.log(`Player is disconnected ${playerID}`)
-
-        game.removePlayer(playerID)
-    })
-
-    socket.on(MessageTypes.move, (message) => {
-
-        console.log(`Moving player ${playerID} ${message.content}`)
-
-        game.movePlayer(playerID, message.content)
-    })
-
-
+    handle.connect(socket)
 
 })

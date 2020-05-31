@@ -1,18 +1,19 @@
-import Subject from "./subject.js";
+import Observable from "./observable.js";
 import {Message, MessageTypes} from "./message.js";
 
 export default class KeyBoardInput {
 
     constructor() {
         document.addEventListener('keydown', this.handleKeydown.bind(this))
-        this.subject = new Subject()
+        this.observable = new Observable()
+
     }
 
-    handleKeydown = function (event) {
+    handleKeydown(event) {
 
         const keyPressed = event.key
 
-        this.subject.notifyAll(new Message(MessageTypes.keydown, keyPressed))
+        this.observable.notifyAll(new Message(MessageTypes.keydown, keyPressed))
     }
 
 

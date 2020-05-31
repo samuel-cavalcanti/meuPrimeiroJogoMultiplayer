@@ -27,8 +27,7 @@
     import GameClient from "./gameClient.js"
     import GameScreen from './screen.js'
     import KeyBoardInput from "./inputs.js"
-    import Networking from "./networking.js";
-
+    import ClientNetworking from "./clientNetworking.js";
 
     const canvasId = 'canvas2D'
 
@@ -45,65 +44,19 @@
 
     let gameClient = new GameClient(gameClientID)
 
-    let networking = new Networking(networkingID)
+    let networking = new ClientNetworking(networkingID)
 
-    const gameClientObserver = gameClient.observer.bind(gameClient)
-
-    const networkingObserver = networking.observer.bind(networking)
 
     // game Client subscribes
-    gameClient.subject.subscribe(networkingID, networkingObserver)
-    gameClient.subject.subscribe(canvasId, gameScreen.setObjects.bind(gameScreen))
+    gameClient.observable.subscribe(networkingID, networking.observers.observer.bind(networking.observers))
+    gameClient.observable.subscribe(canvasId, gameScreen.observers.observer.bind(gameScreen.observers))
 
     // networking subscribes
-    networking.subject.subscribe(gameClientID, gameClientObserver)
+    networking.observable.subscribe(gameClientID, gameClient.observers.observer.bind(gameClient.observers))
 
 
     // keyboard subscribes
-    keyBoardInput.subject.subscribe(gameClientID, gameClientObserver)
-
-    // canvas2D subscribes
-    gameScreen.subject.subscribe(gameClientID, gameClientObserver)
-
-
-    gameScreen.renderScreen()
-
-
-    // function observerScreen(message) {
-    //     if (message.type !== MessageTypes.requestAnimationId)
-    //         return
-    //     requestAnimationID = message.content
-    // }
-    //
-    // socket.on(MessageTypes.connect, () => {
-    //
-    //     function observer(notification) {
-    //         socket.emit(notification.type, notification)
-    //     }
-    //
-    //     const playerID = socket.id
-    //
-    //     keyBoardInput.subject.subscribe(playerID, gameClient.getKey.bind(gameClient))
-    //     gameClient.addScreen(canvasId, game_screen.setObjects.bind(game_screen))
-    //
-    //     game_screen.subject.subscribe('requestAnimationID-0', observerScreen)
-    //
-    //     gameClient.connect(serverID, playerID, observer)
-    //     game_screen.renderScreen()
-    //
-    //
-    // })
-    // socket.on(MessageTypes.state, gameClient.getState.bind(gameClient))
-    //
-    // socket.on(MessageTypes.disconnect, () => {
-    //
-    //     keyBoardInput.subject.unsubscribe(socket.id)
-    //     gameClient.removeScreen(canvasId)
-    //
-    //     gameClient.disconnect(serverID)
-    //     cancelAnimationFrame(requestAnimationID)
-    //
-    // })
+    keyBoardInput.observable.subscribe(gameClientID, gameClient.observers.observer.bind(gameClient.observers))
 
 
 </script>

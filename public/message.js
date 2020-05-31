@@ -5,7 +5,7 @@ class Message {
             this.type = type
             this.content = content
         } else
-            throw (`error type: ${type} content: ${content} `)
+            console.warn(`error type: ${type} content: ${content} `)
 
 
     }
@@ -20,9 +20,11 @@ const Types = {
     connection: 'connection',
     connect: 'connect',
     keydown: 'Keydown',
-    requestAnimationId: 'requestAnimationId',
+    setRenderStatus: 'setRenderStatus',
     setup: 'setup',
-    startRender:'startRender'
+    startRender: 'startRender',
+    addPlayer: 'addPlayer',
+    removePlayer: 'removePlayer'
 
 }
 

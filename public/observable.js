@@ -1,4 +1,4 @@
-export default class Subject {
+export default class Observable {
 
     constructor() {
         this.observers = {}

@@ -1,5 +1,6 @@
-import Subject from "./subject.js";
+import Observable from "./observable.js";
 import {Message, MessageTypes} from "./message.js";
+import Observer from "./observer.js";
 
 export default class GameClient {
 
@@ -13,47 +14,35 @@ export default class GameClient {
         }
 
         this.ids = {
-            server: null,
-            screens: {},
             player: null,
             client: id
         }
 
-        this.requestAnimationID = null
+        this.observable = new Observable()
 
-        this.subject = new Subject()
+        this.observers = new Observer()
 
-        this.observers = this.makeObservers()
+        this.addObservers()
     }
 
 
-    observer = function (message) {
-        if (this.observers[message.type])
-            this.observers[message.type](message.content)
-    }
+    addObservers() {
 
-
-    makeObservers() {
-        let observers = {}
-
-        observers[MessageTypes.state] = this.getState.bind(this)
-        observers[MessageTypes.setup] = this.setup.bind(this)
-        observers[MessageTypes.keydown] = this.getKey.bind(this)
-        observers[MessageTypes.disconnect] = this.disconnect.bind(this)
-
-        return observers
+        this.observers.add(MessageTypes.state, this.getState.bind(this))
+        this.observers.add(MessageTypes.connect, this.connect.bind(this))
+        this.observers.add(MessageTypes.keydown, this.getKey.bind(this))
+        this.observers.add(MessageTypes.disconnect, this.disconnect.bind(this))
 
     }
 
-    setup(content) {
-        const ids = content.ids
+    connect(message) {
+        this.ids.player = message.content.id
 
-        this.ids = Object.assign(this.ids, ids)
-
-        this.getState(content.state)
+        this.observable.notifyAll(new Message(MessageTypes.setRenderStatus, {status: true}))
     }
 
-    getState(state) {
+    getState(message) {
+        let state = message.content
 
         if (!this.ids.player)
             throw (`error playerID must exits id:${this.ids.player}`)
@@ -62,22 +51,20 @@ export default class GameClient {
 
         const objects = Object.values(state.players).concat(Object.values(state.fruits))
 
-        this.subject.notifyAll(new Message(MessageTypes.setObjects, objects))
+        this.observable.notifyAll(new Message(MessageTypes.setObjects, objects))
+
     }
 
-    getKey(key) {
-        console.log(`key press ${key}`)
-
+    getKey(message) {
+        let key = message.content
         if (this.moves[key] !== undefined)
-            this.subject.notifyAll(new Message(MessageTypes.move, this.moves[key]))
+            this.observable.notifyAll(new Message(MessageTypes.move, this.moves[key]))
     }
 
     disconnect(message) {
-        this.ids.server = null
-        this.ids.player = null
 
-        this.subject.unsubscribe(this.ids.server)
-
+        console.log(message)
+        this.observable.notifyAll(new Message(MessageTypes.setRenderStatus, {status: false}))
     }
 
 

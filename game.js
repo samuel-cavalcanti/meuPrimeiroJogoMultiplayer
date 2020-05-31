@@ -1,8 +1,9 @@
-import Player from "./player.js"
-import Subject from "./public/subject.js"
-import Fruit from "./fruit.js"
-import {Message, MessageTypes} from "./public/message.js"
-
+import Player from "./player.js";
+import Fruit from "./fruit.js";
+import {Message, MessageTypes} from "./public/message.js";
+import Observer from "./public/observer.js";
+import Observable from "./public/observable.js";
+import {v4 as uuidv4} from 'uuid'
 
 export default class Game {
 
@@ -20,7 +21,10 @@ export default class Game {
             players: 'players'
         }
 
-        this.subject = new Subject()
+        this.observable = new Observable()
+        this.observers = new Observer()
+
+        this.addObservers()
     }
 
     start = function () {
@@ -29,7 +33,14 @@ export default class Game {
         // setInterval(this.addFruit.bind(this), 2000)
     }
 
-    getState = function () {
+    addObservers() {
+        this.observers.add(MessageTypes.addPlayer, this.addPlayer.bind(this))
+        this.observers.add(MessageTypes.move, this.movePlayer.bind(this))
+        this.observers.add(MessageTypes.removePlayer, this.removePlayer.bind(this))
+    }
+
+
+    getState() {
 
         return {
             players: this.players,
@@ -37,7 +48,12 @@ export default class Game {
         }
     }
 
-    movePlayer = function (id, command) {
+
+    movePlayer(message) {
+        const id = message.content.id
+        const command = message.content.command
+
+
         if (this.players[id] && this[`moveTo${command.toUpperCase()}`] !== undefined) {
             this[`moveTo${command.toUpperCase()}`](id)
         } else
@@ -45,25 +61,32 @@ export default class Game {
 
     }
 
-    addPlayer = function (id, observer) {
+    addPlayer(message) {
+        let player = this.players[message.content.id]
 
-        const player = this.createPlayer(id)
+        if (player && !message.content.id)
+            return
 
-        this.subject.subscribe(id, observer)
-        this.occupySpace(player.x, player.y, this.types.player, id)
 
-        this.addToObject(id, this.types.players, player)
+        player = this.createPlayer(message.content.id)
 
+        this.occupySpace(player.x, player.y, this.types.player, player.id)
+
+        this.addToObject(player.id, this.types.players, player)
+
+        console.log(`add new Player id:${player.id}`)
     }
 
-    removePlayer = function (id) {
+    removePlayer(message) {
+
+        const id = message.content.id
 
         const player = this.players[id]
 
         if (!player)
             return
 
-        this.subject.unsubscribe(id)
+        this.observable.unsubscribe(id)
 
         this.freeSpace(player.x, player.y)
         this.removeFromObject(id, this.types.players)
@@ -100,7 +123,7 @@ export default class Game {
     addToObject(id, object, item) {
         this[object][id] = item
 
-        // this.notifyState()
+        this.notifyState()
     }
 
     removeFromObject(id, object) {
@@ -111,7 +134,7 @@ export default class Game {
     }
 
     notifyState() {
-        this.subject.notifyAll(new Message(MessageTypes.state, this.getState()))
+        this.observable.notifyAll(new Message(MessageTypes.state, this.getState()))
     }
 
 
@@ -145,8 +168,6 @@ export default class Game {
         this.occupySpace(fruit.x, fruit.y, this.types.fruit, fruit.id)
 
         this.addToObject(fruit.id, this.types.fruits, fruit)
-
-
     }
 
     removeFruit(id) {
@@ -167,18 +188,17 @@ export default class Game {
 
     checkFruitCollision(player) {
 
-        console.log(player.x, player.y)
-
         const space = this.matrix[player.x][player.y]
-        if (space) {
-            console.log(space)
-            const split = space.split('-')
-            if (split[0] === this.types.fruit) {
-                this.removeFruit(split[1])
-                player.score++
-                this.occupySpace(player.x, player.y, this.types.player)
-            }
+
+        if (!space)
+            return
+
+        const split = space.split('-')
+        if (split[0] === this.types.fruit) {
+            this.removeFruit(split[1])
+            player.score++
         }
+
     }
 
     //moves
@@ -195,6 +215,7 @@ export default class Game {
         this.players[id][axis] = pos
 
         this.checkFruitCollision(player)
+        this.occupySpace(player.x, player.y, this.types.player)
         this.notifyState()
 
 

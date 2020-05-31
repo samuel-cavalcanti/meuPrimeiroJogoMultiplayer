@@ -1,5 +1,4 @@
-import {MessageTypes, Message} from "./message.js";
-import Subject from "./subject.js";
+import {MessageTypes} from "./message.js";
 import Observer from "./observer.js";
 
 export default class GameScreen {
@@ -17,39 +16,56 @@ export default class GameScreen {
 
         this.objects = []
 
-        this.subject = new Subject()
+        this.observers = new Observer()
 
-        this.observe = new Observer()
-
-        this.addHandles()
+        this.addObservers()
 
     }
 
 
-    addHandles() {
-        this.observe.add(MessageTypes.setObjects, this.setObjects.bind(this))
+    addObservers() {
+        this.observers.add(MessageTypes.setObjects, this.setObjects.bind(this))
+        this.observers.add(MessageTypes.setRenderStatus, this.setRenderStatus.bind(this))
     }
 
 
-    renderScreen = function () {
+    renderScreen() {
 
-        // console.log(`rendering`)
+        this.drawObjects()
+
+        this.requestAnimationID = requestAnimationFrame(this.renderScreen.bind(this))
+
+    }
+
+    drawObjects() {
         this.context.clearRect(0, 0, this.screenWidth, this.screenHeight)
 
         for (const object of this.objects) {
 
             this.drawObject(object)
         }
-
-        this.requestAnimationID = requestAnimationFrame(this.renderScreen.bind(this))
-
-        this.subject.notifyAll(new Message(MessageTypes.requestAnimationId, request))
     }
 
-    setObjects = function (message) {
+    setObjects(message) {
 
         if (message.type === MessageTypes.setObjects)
             this.objects = message.content
+    }
+
+    setRenderStatus(message) {
+
+        if (message.content.status) {
+            this.renderScreen()
+        } else
+            this.stopRender()
+
+    }
+
+    stopRender() {
+
+        console.warn(`stopping render`)
+
+        cancelAnimationFrame(this.requestAnimationID)
     }
 
 
