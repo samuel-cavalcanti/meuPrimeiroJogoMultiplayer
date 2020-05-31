@@ -1,0 +1,111 @@
+<html lang="pt-br">
+
+<head>
+    <meta charset="utf-8">
+    <title>Meu primeiro Jogo Multiplayer</title>
+    <style>
+        canvas.screen {
+            border: 1px solid #CCC;
+            width: 500px;
+            height: 500px;
+
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            image-rendering: -moz-crisp-edges;
+        }
+    </style>
+
+</head>
+
+<body>
+<canvas id="canvas2D" class="screen" width="10" height="10"></canvas>
+
+</body>
+<script src="/socket.io/socket.io.js"></script>
+<script type="module">
+
+    import GameClient from "./gameClient.js"
+    import GameScreen from './screen.js'
+    import KeyBoardInput from "./inputs.js"
+    import Networking from "./networking.js";
+
+
+    const canvasId = 'canvas2D'
+
+    const canvas = document.getElementById(canvasId)
+
+
+    const gameClientID = 'gameClient-0'
+
+    const networkingID = 'networking-0'
+
+    let gameScreen = new GameScreen(canvas)
+
+    let keyBoardInput = new KeyBoardInput()
+
+    let gameClient = new GameClient(gameClientID)
+
+    let networking = new Networking(networkingID)
+
+    const gameClientObserver = gameClient.observer.bind(gameClient)
+
+    const networkingObserver = networking.observer.bind(networking)
+
+    // game Client subscribes
+    gameClient.subject.subscribe(networkingID, networkingObserver)
+    gameClient.subject.subscribe(canvasId, gameScreen.setObjects.bind(gameScreen))
+
+    // networking subscribes
+    networking.subject.subscribe(gameClientID, gameClientObserver)
+
+
+    // keyboard subscribes
+    keyBoardInput.subject.subscribe(gameClientID, gameClientObserver)
+
+    // canvas2D subscribes
+    gameScreen.subject.subscribe(gameClientID, gameClientObserver)
+
+
+    gameScreen.renderScreen()
+
+
+    // function observerScreen(message) {
+    //     if (message.type !== MessageTypes.requestAnimationId)
+    //         return
+    //     requestAnimationID = message.content
+    // }
+    //
+    // socket.on(MessageTypes.connect, () => {
+    //
+    //     function observer(notification) {
+    //         socket.emit(notification.type, notification)
+    //     }
+    //
+    //     const playerID = socket.id
+    //
+    //     keyBoardInput.subject.subscribe(playerID, gameClient.getKey.bind(gameClient))
+    //     gameClient.addScreen(canvasId, game_screen.setObjects.bind(game_screen))
+    //
+    //     game_screen.subject.subscribe('requestAnimationID-0', observerScreen)
+    //
+    //     gameClient.connect(serverID, playerID, observer)
+    //     game_screen.renderScreen()
+    //
+    //
+    // })
+    // socket.on(MessageTypes.state, gameClient.getState.bind(gameClient))
+    //
+    // socket.on(MessageTypes.disconnect, () => {
+    //
+    //     keyBoardInput.subject.unsubscribe(socket.id)
+    //     gameClient.removeScreen(canvasId)
+    //
+    //     gameClient.disconnect(serverID)
+    //     cancelAnimationFrame(requestAnimationID)
+    //
+    // })
+
+
+</script>
+
+</html>
