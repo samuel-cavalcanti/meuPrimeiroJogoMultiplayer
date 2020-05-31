@@ -27,8 +27,8 @@ game.start()
 sockets.on(MessageTypes.connection, (socket) => {
     let handle = new SocketHandler()
 
-    game.observable.subscribe(socket.id, handle.observers.observer.bind(handle.observers))
-    handle.observable.subscribe('game', game.observers.observer.bind(game.observers))
+    game.observable.subscribe(socket.id, handle.observers.observe)
+    handle.observable.subscribe('game', game.observers.observe)
 
     handle.connect(socket)
 

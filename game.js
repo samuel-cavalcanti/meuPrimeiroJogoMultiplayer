@@ -30,7 +30,7 @@ export default class Game {
     start = function () {
         this.addFruit()
 
-        // setInterval(this.addFruit.bind(this), 2000)
+        setInterval(this.addFruit.bind(this), 3000)
     }
 
     addObservers() {

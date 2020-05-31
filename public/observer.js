@@ -2,6 +2,7 @@ export default class Observer {
 
     constructor() {
         this.observers = {}
+        this.observe = this.observerMessage.bind(this)
     }
 
 
@@ -17,7 +18,7 @@ export default class Observer {
     }
 
 
-    observer(message){
+    observerMessage(message) {
         if (this.observers[message.type])
             this.observers[message.type](message)
     }

@@ -24,7 +24,7 @@ export default class GameScreen {
 
 
     addObservers() {
-        this.observers.add(MessageTypes.setObjects, this.setObjects.bind(this))
+        this.observers.add(MessageTypes.state, this.setObjects.bind(this))
         this.observers.add(MessageTypes.setRenderStatus, this.setRenderStatus.bind(this))
     }
 
@@ -47,9 +47,9 @@ export default class GameScreen {
     }
 
     setObjects(message) {
+        let state = message.content
 
-        if (message.type === MessageTypes.setObjects)
-            this.objects = message.content
+        this.objects = Object.values(state.players).concat(Object.values(state.fruits))
     }
 
     setRenderStatus(message) {

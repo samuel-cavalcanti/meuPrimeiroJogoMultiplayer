@@ -49,9 +49,9 @@ export default class GameClient {
         else
             state.players[this.ids.player].color = 'yellow'
 
-        const objects = Object.values(state.players).concat(Object.values(state.fruits))
 
-        this.observable.notifyAll(new Message(MessageTypes.setObjects, objects))
+
+        this.observable.notifyAll(new Message(MessageTypes.state, state))
 
     }
 

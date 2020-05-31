@@ -24,7 +24,8 @@ const Types = {
     setup: 'setup',
     startRender: 'startRender',
     addPlayer: 'addPlayer',
-    removePlayer: 'removePlayer'
+    removePlayer: 'removePlayer',
+    displayTable: 'displayTable',
 
 }
 
