@@ -1,17 +1,24 @@
 import Player from "./player.js";
 import Fruit from "./fruit.js";
-import {Message, MessageTypes} from "./public/message.js";
-import Observer from "./public/observer.js";
-import Observable from "./public/observable.js";
-import {v4 as uuidv4} from 'uuid'
+import {Message, MessageTypes} from "./public/module/message.js";
+import {v4 as uuidV4} from 'uuid'
+import Module from "./public/module/module.js";
+import ModuleNotification from "./public/module/notification.js";
 
-export default class Game {
+export default class Game extends Module {
+
+    notifications = [
+        new ModuleNotification(MessageTypes.move, this.movePlayer.bind(this)),
+        new ModuleNotification(MessageTypes.changeNick, this.changePlayerNick.bind(this)),
+        new ModuleNotification(MessageTypes.addPlayer, this.addPlayer.bind(this)),
+        new ModuleNotification(MessageTypes.removePlayer, this.removePlayer.bind(this)),
+    ]
 
     constructor() {
+        super()
         this.players = {}
         this.fruits = {}
         this.size = {x: 10, y: 10}
-        this.fruitsCurrentId = 0
         this.pixelSize = 1
         this.matrix = this.createMatrix()
         this.types = {
@@ -21,22 +28,19 @@ export default class Game {
             players: 'players'
         }
 
-        this.observable = new Observable()
-        this.observers = new Observer()
+        this.__ID = uuidV4();
 
-        this.addObservers()
+
+        this.addNotifications()
+
+
     }
 
-    start = function () {
+
+    start() {
         this.addFruit()
 
         setInterval(this.addFruit.bind(this), 3000)
-    }
-
-    addObservers() {
-        this.observers.add(MessageTypes.addPlayer, this.addPlayer.bind(this))
-        this.observers.add(MessageTypes.move, this.movePlayer.bind(this))
-        this.observers.add(MessageTypes.removePlayer, this.removePlayer.bind(this))
     }
 
 
@@ -62,6 +66,7 @@ export default class Game {
     }
 
     addPlayer(message) {
+
         let player = this.players[message.content.id]
 
         if (player && !message.content.id)
@@ -79,18 +84,32 @@ export default class Game {
 
     removePlayer(message) {
 
-        const id = message.content.id
+        const socketModule = message.content.socketModule
 
-        const player = this.players[id]
+        const playerID = socketModule.socket.id
+
+        const player = this.players[playerID]
 
         if (!player)
             return
 
-        this.observable.unsubscribe(id)
+        socketModule.unsubscribe(this) // === this.subscribers.removeSubscribe(socketModule.__ID)
+
 
         this.freeSpace(player.x, player.y)
-        this.removeFromObject(id, this.types.players)
+        this.removeFromObject(playerID, this.types.players)
 
+    }
+
+    changePlayerNick(message) {
+        const id = message.content.id
+        const newNick = message.content.nick
+
+        if (this.players[id])
+            this.players[id].nick = newNick
+
+
+        this.notifyState()
     }
 
 
@@ -134,7 +153,7 @@ export default class Game {
     }
 
     notifyState() {
-        this.observable.notifyAll(new Message(MessageTypes.state, this.getState()))
+        this.notifyAll(new Message(MessageTypes.state, this.getState()))
     }
 
 
@@ -156,14 +175,12 @@ export default class Game {
             pos = this.randPos()
 
 
-        this.fruitsCurrentId++
-
         return new Fruit(id, pos.x, pos.y)
     }
 
     addFruit() {
 
-        const fruit = this.createFruit(this.fruitsCurrentId)
+        const fruit = this.createFruit(uuidV4())
 
         this.occupySpace(fruit.x, fruit.y, this.types.fruit, fruit.id)
 

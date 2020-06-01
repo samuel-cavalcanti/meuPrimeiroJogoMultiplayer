@@ -1,10 +1,19 @@
-import Observable from "./observable.js";
-import {Message, MessageTypes} from "./message.js";
-import Observer from "./observer.js";
+import {Message, MessageTypes} from "./module/message.js";
+import Module from "./module/module.js";
+import ModuleNotification from "./module/notification.js";
 
-export default class GameClient {
+export default class GameClient extends Module {
 
-    constructor(id) {
+    notifications = [
+        new ModuleNotification(MessageTypes.state, this.getState.bind(this)),
+        new ModuleNotification(MessageTypes.connect, this.connect.bind(this)),
+        new ModuleNotification(MessageTypes.keydown, this.getKey.bind(this)),
+        new ModuleNotification(MessageTypes.disconnect, this.disconnect.bind(this)),
+        new ModuleNotification(MessageTypes.changeNick, this.changeNick.bind(this)),
+    ]
+
+    constructor() {
+        super()
 
         this.moves = {
             'w': 'up',
@@ -13,32 +22,32 @@ export default class GameClient {
             'd': 'right'
         }
 
+        this.nick = null
+
         this.ids = {
             player: null,
-            client: id
         }
 
-        this.observable = new Observable()
-
-        this.observers = new Observer()
-
-        this.addObservers()
+        this.addNotifications()
     }
 
-
-    addObservers() {
-
-        this.observers.add(MessageTypes.state, this.getState.bind(this))
-        this.observers.add(MessageTypes.connect, this.connect.bind(this))
-        this.observers.add(MessageTypes.keydown, this.getKey.bind(this))
-        this.observers.add(MessageTypes.disconnect, this.disconnect.bind(this))
-
-    }
 
     connect(message) {
-        this.ids.player = message.content.id
 
-        this.observable.notifyAll(new Message(MessageTypes.setRenderStatus, {status: true}))
+        this.ids.player = message.content.id
+        const nick = this.nick ? this.nick : this.ids.player
+        const content = {status: true}
+
+        this.notifyAll(new Message(MessageTypes.setRenderStatus, content))
+        this.notifyAll(new Message(MessageTypes.keydownStatus, content))
+
+        this.notifyAll(new Message(MessageTypes.changeNick, {nick: nick}))
+    }
+
+    changeNick(message) {
+        this.nick = message.content.nick
+
+        this.notifyAll(new Message(MessageTypes.changeNick, {nick: this.nick}))
     }
 
     getState(message) {
@@ -50,21 +59,19 @@ export default class GameClient {
             state.players[this.ids.player].color = 'yellow'
 
 
-
-        this.observable.notifyAll(new Message(MessageTypes.state, state))
+        this.notifyAll(new Message(MessageTypes.state, state))
 
     }
 
     getKey(message) {
         let key = message.content
         if (this.moves[key] !== undefined)
-            this.observable.notifyAll(new Message(MessageTypes.move, this.moves[key]))
+            this.notifyAll(new Message(MessageTypes.move, this.moves[key]))
     }
 
     disconnect(message) {
 
-        console.log(message)
-        this.observable.notifyAll(new Message(MessageTypes.setRenderStatus, {status: false}))
+        this.notifyAll(new Message(MessageTypes.setRenderStatus, {status: false}))
     }
 
 

@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/samuel-cavalcanti/meuPrimeiroJogoMultiplayer#readme",
   "dependencies": {
+    "crypto-browserify": "^3.11.0",
     "express": "^4.17.1",
     "http": "0.0.1-security",
     "nodemon": "^2.0.4",

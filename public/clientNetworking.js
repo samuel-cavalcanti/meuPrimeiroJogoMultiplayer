@@ -1,47 +1,51 @@
-import Observable from "./observable.js";
-import {Message, MessageTypes} from "./message.js";
-import Observer from "./observer.js";
+import {Message, MessageTypes} from "./module/message.js";
+import Module from "./module/module.js";
+import ModuleNotification from "./module/notification.js";
 
-export default class ClientNetworking {
+export default class ClientNetworking extends Module {
 
-    constructor(id) {
+    notifications = [
+        new ModuleNotification(MessageTypes.move, this.emit.bind(this)),
+        new ModuleNotification(MessageTypes.changeNick, this.emit.bind(this))
+
+    ]
+
+    constructor() {
+        super()
 
         this.socket = io()
-        this.observable = new Observable()
-        this.id = id
 
-        this.observers = new Observer()
-        this.addObservers()
         this.createListeners()
-    }
 
+        this.addNotifications()
+
+    }
 
     createListeners() {
         this.socket.on(MessageTypes.connect, this.connect.bind(this))
         this.socket.on(MessageTypes.disconnect, this.nullMessage(MessageTypes.disconnect))
-
-        this.socket.on(MessageTypes.setup, this.observable.notifyAll.bind(this.observable))
-        this.socket.on(MessageTypes.state, this.observable.notifyAll.bind(this.observable))
-        this.socket.on(MessageTypes.move, this.observable.notifyAll.bind(this.observable))
+        this.socket.on(MessageTypes.setup, this.notifyAll.bind(this))
+        this.socket.on(MessageTypes.state, this.notifyAll.bind(this))
+        this.socket.on(MessageTypes.move, this.notifyAll.bind(this))
     }
 
     emit(message) {
         this.socket.emit(message.type, message)
     }
 
-    addObservers() {
-        this.observers.add(MessageTypes.move, this.emit.bind(this))
-    }
 
     connect() {
-        this.observable.notifyAll(new Message(MessageTypes.connect, {id: this.socket.id}))
+        console.log(` client connect`)
+        this.notifyAll(new Message(MessageTypes.connect, {id: this.socket.id}))
+
+
     }
 
     nullMessage(type) {
 
         function message() {
             const message = new Message(type, {})
-            this.observable.notifyAll(message)
+            this.notifyAll(message)
         }
 
         return message.bind(this)

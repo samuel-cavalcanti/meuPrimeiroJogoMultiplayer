@@ -8,6 +8,7 @@
             border: 10px solid #CCC;
             width: 500px;
             height: 500px;
+            cursor: pointer;
 
             image-rendering: pixelated;
             image-rendering: crisp-edges;
@@ -15,25 +16,12 @@
         }
 
         body {
-            margin: 40px 0 0 0;
+            /*margin: 40px 0 0 0;*/
             padding: 0;
             background-color: #EEE;
             text-align: center;
         }
 
-        #canvas2D {
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-            image-rendering: -moz-crisp-edges;
-            -webkit-box-shadow: 0px 4px 17px 0px rgba(0, 0, 0, 0.19);
-            -moz-box-shadow: 0px 4px 17px 0px rgba(0, 0, 0, 0.19);
-            box-shadow: 0px 4px 17px 0px rgba(0, 0, 0, 0.19);
-            margin-bottom: 20px;
-            margin-left: 20px;
-            margin-right: 20px;
-            display: inline-block;
-            vertical-align: top;
-        }
 
         #score-table {
             font-size: 13px;
@@ -64,13 +52,14 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            display: inline-block
+            display: inline-block;
+            text-align: center;
         }
 
         #score-table .score-value {
             font-weight: bold;
             color: #000;
-            text-align: right;
+            text-align: center;
         }
 
         #score-table .current-player .socket-id,
@@ -92,68 +81,109 @@
             font-family: Arial, Helvetica, sans-serif;
             display: none;
         }
+
+        div.controls {
+            float: left;
+            margin-left: 10px;
+        }
+
+        th {
+            font-size: 30px;
+        }
+
     </style>
 
 </head>
 
 <body>
 <div id="game-container">
+
+    <div class="controls">
+        <h1 class="socket-id">Controles</h1>
+        <img src="controls/w.svg" style="
+        display: -webkit-box;
+        margin-left: auto;
+        margin-right: auto;" alt="">
+
+        <div style="margin-top: 4px;">
+            <img src="controls/a.svg" alt="">
+            <img src="controls/s.svg" alt="">
+            <img src="controls/d.svg" alt="">
+        </div>
+
+        <div id="insertNick">
+
+            <h1>Mude seu Nick</h1>
+
+            <label for="nick" style="cursor: pointer">Nick Name:</label>
+            <input type="text" id="nick" maxlength="7" style="width: 85px; margin-top: 10px">
+        </div>
+
+    </div>
+
+
     <canvas id="canvas2D" class="screen" width="10" height="10"></canvas>
 
-    <table id="score-table">
+    <table id="score-table"></table>
 
-    </table>
+
 </div>
-
-
-
-
 
 
 </body>
 <script src="/socket.io/socket.io.js"></script>
 <script type="module">
 
-    import GameClient from "./gameClient.js"
-    import GameScreen from './screen.js'
-    import KeyBoardInput from "./inputs.js"
+    import GameClient from "./gameClient.js";
+    import Canvas2D from './canvas2d.js';
+    import KeyBoardInput from "./keyboardInput.js";
     import ClientNetworking from "./clientNetworking.js";
     import Table from "./table.js";
+    import InputNick from "./inputNick.js";
 
-    const canvasId = 'canvas2D'
+    const htmlCanvas = document.getElementById('canvas2D')
 
-    const canvas = document.getElementById(canvasId)
+    const htmlTable = document.getElementById('score-table')
 
-    const tableID = 'score-table'
+    const htmlInput = document.getElementById('nick')
 
-    const htmlTable = document.getElementById(tableID)
 
-    const gameClientID = 'gameClient-0'
-
-    const networkingID = 'networking-0'
+    let canvas = new Canvas2D(htmlCanvas)
 
     let table = new Table(htmlTable)
 
-    let gameScreen = new GameScreen(canvas)
+    let inputNick = new InputNick(htmlInput)
 
     let keyBoardInput = new KeyBoardInput()
 
-    let gameClient = new GameClient(gameClientID)
+    let gameClient = new GameClient()
 
-    let networking = new ClientNetworking(networkingID)
+    let clientNetworking = new ClientNetworking()
 
 
     // game Client subscribes
-    gameClient.observable.subscribe(networkingID, networking.observers.observe)
-    gameClient.observable.subscribe(canvasId, gameScreen.observers.observe)
-    gameClient.observable.subscribe(tableID,table.observers.observe)
+    gameClient.subscribe(clientNetworking) // rescebe todas as informções od server
+    gameClient.subscribe(inputNick) // informa ao client o que esta sendo digitado no input
+    gameClient.subscribe(keyBoardInput) // informa ao client o que está sendo digitado globalmente
+
 
     // networking subscribes
-    networking.observable.subscribe(gameClientID, gameClient.observers.observe)
+    clientNetworking.subscribe(gameClient) // rescebe todas as funções do jogo possíveis
 
 
     // keyboard subscribes
-    keyBoardInput.observable.subscribe(gameClientID, gameClient.observers.observe)
+    keyBoardInput.subscribe(canvas) // liga ao clicar na tela
+    keyBoardInput.subscribe(gameClient) // liga ao jogo for connectado
+    keyBoardInput.subscribe(inputNick) //  desliga caso alguém vá trocar o nick
+
+    // Input text subscribes
+    inputNick.subscribe(gameClient)  // muda o placeHolder do input
+
+    //Canvas subscribes
+    canvas.subscribe(gameClient) //  rescebe os objetos a serem renderizados
+
+    //table subscribes
+    table.subscribe(gameClient) // rescebe os players para serem enviados
 
 
 </script>
