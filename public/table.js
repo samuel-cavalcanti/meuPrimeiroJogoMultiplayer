@@ -4,7 +4,7 @@ import ModuleNotification from "./module/notification.js";
 
 export default class Table extends Module {
     notifications = [
-        new ModuleNotification(MessageTypes.state, this.showPlayers.bind(this))
+        new ModuleNotification(MessageTypes.gameCommands.state, this.showPlayers.bind(this))
     ]
 
 

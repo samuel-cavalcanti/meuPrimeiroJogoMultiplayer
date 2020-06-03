@@ -67,21 +67,6 @@
             color: #bdaa27;
         }
 
-        #max-concurrent-connection-message {
-            background-color: #F0DB4F;
-            border: 1px solid #000;
-            text-align: center;
-            margin: auto;
-            margin: 100px;
-            padding: 50px;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            display: none;
-        }
-
         div.controls {
             float: left;
             margin-left: 10px;
@@ -91,6 +76,11 @@
             font-size: 30px;
         }
 
+        img.wsad {
+            border-radius: 25%;
+            background-color: transparent;
+        }
+
     </style>
 
 </head>
@@ -98,17 +88,17 @@
 <body>
 <div id="game-container">
 
-    <div class="controls">
+    <div id="controls" class="controls">
         <h1 class="socket-id">Controles</h1>
-        <img src="controls/w.svg" style="
+        <img id="w.svg" class="wsad" src="controls/w.svg" style="
         display: -webkit-box;
         margin-left: auto;
         margin-right: auto;" alt="">
 
         <div style="margin-top: 4px;">
-            <img src="controls/a.svg" alt="">
-            <img src="controls/s.svg" alt="">
-            <img src="controls/d.svg" alt="">
+            <img id="a.svg" class="wsad" src="controls/a.svg" alt="">
+            <img id="s.svg" class="wsad" src="controls/s.svg" alt="">
+            <img id="d.svg" class="wsad" src="controls/d.svg" alt="">
         </div>
 
         <div id="insertNick">
@@ -126,7 +116,6 @@
 
     <table id="score-table"></table>
 
-
 </div>
 
 
@@ -140,12 +129,16 @@
     import ClientNetworking from "./clientNetworking.js";
     import Table from "./table.js";
     import InputNick from "./inputNick.js";
+    import GameAudio from "./gameAudio/gameAudio.js";
+    import ControlsImage from "./controlsImage.js";
 
     const htmlCanvas = document.getElementById('canvas2D')
 
     const htmlTable = document.getElementById('score-table')
 
     const htmlInput = document.getElementById('nick')
+
+    const htmlDivControls = document.getElementById('controls')
 
 
     let canvas = new Canvas2D(htmlCanvas)
@@ -154,35 +147,45 @@
 
     let inputNick = new InputNick(htmlInput)
 
+    let controlsImage = new ControlsImage(htmlDivControls)
+
     let keyBoardInput = new KeyBoardInput()
 
     let gameClient = new GameClient()
 
+    let gameAudio = new GameAudio()
+
     let clientNetworking = new ClientNetworking()
 
 
-    // game Client subscribes
+    // Image animation
+    controlsImage.subscribe(keyBoardInput) // mostra as teclas precionadas
+
+    // game Audio subscriptions
+    gameAudio.subscribe(gameClient) // ao remover uma frutinha toca uma musica
+    gameAudio.subscribe(keyBoardInput)
+
+    // game Client subscriptions
     gameClient.subscribe(clientNetworking) // rescebe todas as informções od server
     gameClient.subscribe(inputNick) // informa ao client o que esta sendo digitado no input
     gameClient.subscribe(keyBoardInput) // informa ao client o que está sendo digitado globalmente
 
 
-    // networking subscribes
+    // networking subscriptions
     clientNetworking.subscribe(gameClient) // rescebe todas as funções do jogo possíveis
 
-
-    // keyboard subscribes
+    // keyboard subscriptions
     keyBoardInput.subscribe(canvas) // liga ao clicar na tela
     keyBoardInput.subscribe(gameClient) // liga ao jogo for connectado
     keyBoardInput.subscribe(inputNick) //  desliga caso alguém vá trocar o nick
 
-    // Input text subscribes
+    // Input text subscriptions
     inputNick.subscribe(gameClient)  // muda o placeHolder do input
 
-    //Canvas subscribes
+    //Canvas subscriptions
     canvas.subscribe(gameClient) //  rescebe os objetos a serem renderizados
 
-    //table subscribes
+    //table subscriptions
     table.subscribe(gameClient) // rescebe os players para serem enviados
 
 

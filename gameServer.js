@@ -21,10 +21,9 @@ server.listen(3000, () => {
 
 let game = new Game()
 
-// game.start()
 
 
-sockets.on(MessageTypes.connection, (socket) => {
+sockets.on(MessageTypes.network.connection, (socket) => {
     let handle = new SocketHandler()
     game.subscribe(handle)
     handle.subscribe(game)

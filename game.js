@@ -8,28 +8,57 @@ import ModuleNotification from "./public/module/notification.js";
 export default class Game extends Module {
 
     notifications = [
-        new ModuleNotification(MessageTypes.move, this.movePlayer.bind(this)),
-        new ModuleNotification(MessageTypes.changeNick, this.changePlayerNick.bind(this)),
-        new ModuleNotification(MessageTypes.addPlayer, this.addPlayer.bind(this)),
-        new ModuleNotification(MessageTypes.removePlayer, this.removePlayer.bind(this)),
+        new ModuleNotification(MessageTypes.gameCommands.move, this.movePlayer.bind(this)),
+        new ModuleNotification(MessageTypes.gameCommands.changeNick, this.changePlayerNick.bind(this)),
+        new ModuleNotification(MessageTypes.gameCommands.addPlayer, this.addPlayer.bind(this)),
+        new ModuleNotification(MessageTypes.gameCommands.removePlayer, this.removePlayer.bind(this)),
     ]
+    types = {
+        fruits: 'fruits',
+        players: 'players'
+    }
+    features = {
+        removePlayer: MessageTypes.gameCommands.removePlayer,
+        addPlayer: MessageTypes.gameCommands.addPlayer,
+        changePlayerNick: MessageTypes.gameCommands.changeNick,
+        addFruit: 'addFruit',
+        removeFruit: 'removeFruit',
+        collisionPlayer: 'collisionPlayer',
+        audio: MessageTypes.audio,
+        stages: {
+            easy: this.easy.bind(this),
+            puzzle: this.puzzleStage.bind(this),
+            finalBattle: this.finalBattle.bind(this),
+            gameOver: this.gameOver.bind(this)
+        }
+    }
+
+    axis = {
+        x: 'x',
+        y: 'y'
+    }
 
     constructor() {
         super()
         this.players = {}
         this.fruits = {}
+        this.intervals = {
+            fruits: null,
+            stage: null
+        }
         this.size = {x: 10, y: 10}
         this.pixelSize = 1
         this.matrix = this.createMatrix()
-        this.types = {
-            fruit: 'fruit',
-            player: 'player',
-            fruits: 'fruits',
-            players: 'players'
-        }
+
 
         this.__ID = uuidV4();
 
+        this.state = {
+            players: this.players,
+            fruits: this.fruits,
+        }
+
+        this.stage = this.features.stages.easy
 
         this.addNotifications()
 
@@ -38,18 +67,66 @@ export default class Game extends Module {
 
 
     start() {
+
         this.addFruit()
 
-        setInterval(this.addFruit.bind(this), 3000)
+        this.stage()
+
+        this.intervals.stage = setInterval(() => {
+            this.stage()
+        }, 37000)
+
     }
 
 
+    easy() {
+        console.log(`staring Easy stage`)
+        this.addToState(MessageTypes.audio.playAudio, MessageTypes.audio.marimba)
+        clearInterval(this.intervals.fruits)
+        this.intervals.fruits = setInterval(this.addFruit.bind(this), 4000)
+        this.stage = this.features.stages.puzzle
+    }
+
+    puzzleStage() {
+        console.log(`staring Puzzle stage`)
+        this.addToState(MessageTypes.audio.playAudio, MessageTypes.audio.solveThePuzzle)
+        this.confuseControls(true)
+        clearInterval(this.intervals.fruits)
+        this.intervals.fruits = setInterval(this.addFruit.bind(this), 2500)
+        this.stage = this.features.stages.finalBattle
+    }
+
+    finalBattle() {
+        console.log(`staring final Battle stage`)
+        this.addToState(MessageTypes.audio.playAudio, MessageTypes.audio.battle)
+        this.confuseControls(false)
+        clearInterval(this.intervals.fruits)
+        this.intervals.fruits = setInterval(this.addFruit.bind(this), 1000)
+
+        this.stage = this.features.stages.gameOver
+    }
+
+    gameOver() {
+        console.log(`game is Over`)
+        clearInterval(this.intervals.fruits)
+        clearInterval(this.intervals.stage)
+    }
+
+    addToState(key, value) {
+        this.state[key] = value
+    }
+
     getState() {
 
-        return {
+        const currentState = this.state
+
+        this.state = { // reset state
             players: this.players,
             fruits: this.fruits
         }
+
+
+        return currentState
     }
 
 
@@ -58,7 +135,7 @@ export default class Game extends Module {
         const command = message.content.command
 
 
-        if (this.players[id] && this[`moveTo${command.toUpperCase()}`] !== undefined) {
+        if (this.players[id] && this[`moveTo${command.toUpperCase()}`]) {
             this[`moveTo${command.toUpperCase()}`](id)
         } else
             console.warn(`Player ${id} or ${command} not found`)
@@ -75,9 +152,17 @@ export default class Game extends Module {
 
         player = this.createPlayer(message.content.id)
 
-        this.occupySpace(player.x, player.y, this.types.player, player.id)
+        if (!player)
+            return
+
+        this.addToState(this.features.addPlayer, true)
+
+        this.occupySpace(player.x, player.y, player.id)
 
         this.addToObject(player.id, this.types.players, player)
+
+        // this.start()
+        this.features.stages.puzzle()
 
         console.log(`add new Player id:${player.id}`)
     }
@@ -95,6 +180,7 @@ export default class Game extends Module {
 
         socketModule.unsubscribe(this) // === this.subscribers.removeSubscribe(socketModule.__ID)
 
+        this.addToState(this.features.removePlayer, true)
 
         this.freeSpace(player.x, player.y)
         this.removeFromObject(playerID, this.types.players)
@@ -134,8 +220,8 @@ export default class Game extends Module {
     }
 
     createPlayer(id) {
-        const pos = this.randPos()
-        return new Player(id, pos.x, pos.y)
+        const pos = this.availablePos()
+        return pos ? new Player(id, pos.x, pos.y) : null
     }
 
 
@@ -153,7 +239,7 @@ export default class Game extends Module {
     }
 
     notifyState() {
-        this.notifyAll(new Message(MessageTypes.state, this.getState()))
+        this.notifyAll(new Message(MessageTypes.gameCommands.state, this.getState()))
     }
 
 
@@ -172,8 +258,7 @@ export default class Game extends Module {
         let pos = this.availablePos()
 
         if (!pos)
-            pos = this.randPos()
-
+            return
 
         return new Fruit(id, pos.x, pos.y)
     }
@@ -182,39 +267,40 @@ export default class Game extends Module {
 
         const fruit = this.createFruit(uuidV4())
 
-        this.occupySpace(fruit.x, fruit.y, this.types.fruit, fruit.id)
+        if (!fruit)
+            return
+
+        this.occupySpace(fruit.x, fruit.y, fruit.id)
+
+        this.addToState(this.features.addFruit, true)
 
         this.addToObject(fruit.id, this.types.fruits, fruit)
     }
 
     removeFruit(id) {
-        console.log(`removeFruit`)
-        console.log(id, this.fruits)
+        console.log(`removeFruit`, this.fruits[id])
         this.freeSpace(this.fruits[id].x, this.fruits[id].y)
         this.removeFromObject(id, this.types.fruits)
     }
 
 
-    occupySpace(i, j, type, id) {
-        this.matrix[i][j] = `${type}-${id}`
+    occupySpace(i, j, id) {
+        this.matrix[i][j] = id
     }
 
     freeSpace(i, j) {
         this.matrix[i][j] = null
     }
 
-    checkFruitCollision(player) {
+    checkCollision(player) {
 
-        const space = this.matrix[player.x][player.y]
+        const id = this.matrix[player.x][player.y]
 
-        if (!space)
-            return
+        if (!id)
+            return false
 
-        const split = space.split('-')
-        if (split[0] === this.types.fruit) {
-            this.removeFruit(split[1])
-            player.score++
-        }
+        return id
+
 
     }
 
@@ -227,31 +313,118 @@ export default class Game extends Module {
         if (this.size[axis] <= pos || pos < 0)
             return
 
-        this.freeSpace(player.x, player.y)
+        let oldPos = {
+            x: player.x,
+            y: player.y
+        }
 
-        this.players[id][axis] = pos
 
-        this.checkFruitCollision(player)
-        this.occupySpace(player.x, player.y, this.types.player)
+        player[axis] = pos
+
+        const collisionID = this.checkCollision(player)
+
+        if (!collisionID) {
+            this.freeSpace(oldPos.x, oldPos.y)
+            this.occupySpace(player.x, player.y, player.id)
+
+        } else if (this.fruits[collisionID]) {
+            this.collisionFruit(player, collisionID)
+            this.freeSpace(oldPos.x, oldPos.y)
+            this.occupySpace(player.x, player.y, player.id)
+        } else {
+            this.collisionPlayer(player, collisionID)
+            player.x = oldPos.x
+            player.y = oldPos.y
+        }
+
+
         this.notifyState()
 
 
     }
 
+
+    collisionFruit(player, collisionID) {
+        this.addToState(this.features.removeFruit, player)
+        this.removeFruit(collisionID)
+        player.score++
+    }
+
+    collisionPlayer(player, collisionID) {
+        let players = {}
+        players[player.id] = collisionID
+        players[collisionID] = collisionID
+
+        this.addToState(this.features.collisionPlayer, players)
+    }
+
+    confuseControls(confuse) {
+
+        if (confuse) {
+
+            const confuseAll = this.buildConfusion()
+
+            console.log(confuseAll)
+
+            this.confuseAxis(confuseAll.confuseAxis)
+            this.confuseDirection(confuseAll.confuseDirection)
+        } else {
+            this.confuseAxis(false)
+            this.confuseDirection(false)
+        }
+
+
+    }
+
+    buildConfusion() {
+        let confuseAxis = Math.round(Math.random()) === 0
+        let confuseDirection = Math.round(Math.random()) === 0
+
+        while (!confuseAxis && !confuseDirection) {
+            confuseAxis = Math.round(Math.random()) === 0
+            confuseDirection = Math.round(Math.random()) === 0
+        }
+
+        return {
+            confuseDirection,
+            confuseAxis
+        }
+    }
+
+
+    confuseAxis(confuse) {
+        if (confuse) {
+            this.axis.x = 'y'
+            this.axis.y = 'x'
+        } else {
+            this.axis.x = 'x'
+            this.axis.y = 'y'
+        }
+
+    }
+
+    confuseDirection(confuse) {
+        if (confuse)
+            this.pixelSize = -1
+        else
+            this.pixelSize = 1
+
+    }
+
     moveToUP(id) {
-        this.moveAxis(id, 'y', -this.pixelSize)
+        this.moveAxis(id, this.axis.y, -this.pixelSize)
     }
 
     moveToDOWN(id) {
-        this.moveAxis(id, 'y', this.pixelSize)
+        this.moveAxis(id, this.axis.y, this.pixelSize)
     }
 
     moveToLEFT(id) {
-        this.moveAxis(id, 'x', -this.pixelSize)
+        this.moveAxis(id, this.axis.x, -this.pixelSize)
     }
 
     moveToRIGHT(id) {
-        this.moveAxis(id, 'x', this.pixelSize)
+        this.moveAxis(id, this.axis.x, this.pixelSize)
     }
 
 }

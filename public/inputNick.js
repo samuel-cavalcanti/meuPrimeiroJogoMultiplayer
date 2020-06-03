@@ -6,7 +6,7 @@ import Module from "./module/module.js";
 export default class InputNick extends Module {
 
 
-    notifications = [new ModuleNotification(MessageTypes.changeNick, this.changeNick.bind(this))]
+    notifications = [new ModuleNotification(MessageTypes.gameCommands.changeNick, this.changeNick.bind(this))]
 
     constructor(htmlInput) {
         super()
@@ -21,18 +21,18 @@ export default class InputNick extends Module {
     }
 
     onInput(event) {
-        this.notifyAll(new Message(MessageTypes.changeNick, {nick: this.htmlInput.value}))
+        this.notifyAll(new Message(MessageTypes.gameCommands.changeNick, {nick: this.htmlInput.value}))
     }
 
     onChange(event) {
         this.htmlInput.value = ''
-        this.notifyAll(new Message(MessageTypes.keydownStatus, {status: true}))
+        this.notifyAll(new Message(MessageTypes.keyboard.keydownStatus, {status: true}))
 
     }
 
     onClick(event) {
         console.log("input on click")
-        this.notifyAll(new Message(MessageTypes.keydownStatus, {status: false}))
+        this.notifyAll(new Message(MessageTypes.keyboard.keydownStatus, {status: false}))
     }
 
     changeNick(message) {

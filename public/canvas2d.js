@@ -4,8 +4,8 @@ import ModuleNotification from "./module/notification.js";
 
 export default class Canvas2D extends Module {
     notifications = [
-        new ModuleNotification(MessageTypes.state, this.setObjects.bind(this)),
-        new ModuleNotification(MessageTypes.setRenderStatus, this.setRenderStatus.bind(this)),
+        new ModuleNotification(MessageTypes.gameCommands.state, this.renderState.bind(this)),
+        new ModuleNotification(MessageTypes.render.setRenderStatus, this.setRenderStatus.bind(this)),
     ]
 
     constructor(htmlCanvas) {
@@ -32,7 +32,7 @@ export default class Canvas2D extends Module {
 
 
     onClick(event) {
-        this.notifyAll(new Message(MessageTypes.keydownStatus, {status: true}))
+        this.notifyAll(new Message(MessageTypes.keyboard.keydownStatus, {status: true}))
     }
 
 
@@ -51,9 +51,17 @@ export default class Canvas2D extends Module {
 
             this.drawObject(object)
         }
+
     }
 
-    setObjects(message) {
+    drawObject(object2d) {
+        const width = object2d.width ? object2d.width : this.defaultObjectSize
+        const height = object2d.height ? object2d.height : this.defaultObjectSize
+        this.context.fillStyle = object2d.color
+        this.context.fillRect(object2d.x, object2d.y, width, height)
+    }
+
+    renderState(message) {
         let state = message.content
 
         this.objects = Object.values(state.players).concat(Object.values(state.fruits))
@@ -73,14 +81,6 @@ export default class Canvas2D extends Module {
         console.warn(`stopping render`)
 
         cancelAnimationFrame(this.requestAnimationID)
-    }
-
-
-    drawObject(object2d) {
-        const width = object2d.width ? object2d.width : this.defaultObjectSize
-        const height = object2d.height ? object2d.height : this.defaultObjectSize
-        this.context.fillStyle = object2d.color
-        this.context.fillRect(object2d.x, object2d.y, width, height)
     }
 
 
